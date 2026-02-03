@@ -1,7 +1,7 @@
 import cv2
 from ultralytics import YOLO
 
-model = YOLO('yolov8n.pt')
+model = YOLO('yolov8s.pt')
 
 # 0 for the default webcam.
 cap = cv2.VideoCapture(0)
