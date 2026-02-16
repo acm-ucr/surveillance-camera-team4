@@ -1,7 +1,23 @@
 import cv2
 import csv
 import datetime
+import json
+import paho.mqtt.client as mqtt
 from ultralytics import YOLO
+
+MQTT_BROKER = "test.mosquitto.org"  # Temp IP
+MQTT_PORT = 1883
+MQTT_TOPIC = "yolo/detections"
+
+client = mqtt.Client()
+
+try:
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start() # Start the network loop in a background thread
+    print(f"Connected to MQTT Broker at {MQTT_BROKER}")
+except Exception as e:
+    print(f"Failed to connect to MQTT: {e}")
+    exit()
 
 model = YOLO('yolov8s.pt')
 
@@ -30,7 +46,7 @@ while True:
         annotated_frame = r.plot()
         cv2.imshow('YOLOv8 Detection', annotated_frame)
 
-        # Extract data for CSV
+        # Extract data for CSV and MQTT
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Iterate through every detection in the current frame
@@ -44,6 +60,20 @@ while True:
             # Bounding box location
             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
 
+            payload = {
+                "timestamp": current_time,
+                "class": class_name,
+                "confidence": round(confidence, 2),
+                "box": {
+                    "x1": float(x1),
+                    "y1": float(y1),
+                    "x2": float(x2),
+                    "y2": float(y2)
+                }
+            }
+
+            client.publish(MQTT_TOPIC, json.dumps(payload))
+
             # Write to file
             with open(csv_file, 'a', newline='') as f:
                 writer = csv.writer(f)
@@ -52,5 +82,7 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+client.loop_stop() # Stop the MQTT background thread
+client.disconnect()
 cap.release()
 cv2.destroyAllWindows()
