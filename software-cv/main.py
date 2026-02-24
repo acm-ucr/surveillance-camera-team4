@@ -21,7 +21,7 @@ except Exception as e:
 
 model = YOLO('yolov8s.pt')
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("http://172.20.10.6:81/stream")
 
 if not cap.isOpened():
     print("Error: Could not open video source.")
